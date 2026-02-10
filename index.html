@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni-Calculator</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --screen-bg: #2d2d2d;
+            --btn-bg: #3a3a3a;
+            --btn-hover: #4a4a4a;
+            --accent: #007acc;
+            --accent-hover: #005f9e;
+            --text-main: #ffffff;
+            --text-sec: #aaaaaa;
+            --operator-color: #ff9500;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .container {
+            background-color: var(--bg-color);
+            width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header & Tabs --- */
+        .tabs {
+            display: flex;
+            background: #252525;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: none;
+            color: var(--text-sec);
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* --- Display Screen --- */
+        .screen {
+            background-color: var(--screen-bg);
+            padding: 20px;
+            text-align: right;
+            border-bottom: 1px solid #444;
+        }
+        .history {
+            color: var(--text-sec);
+            font-size: 0.9rem;
+            min-height: 1.2rem;
+            margin-bottom: 5px;
+        }
+        .current-input {
+            font-size: 2.5rem;
+            word-wrap: break-word;
+        }
+
+        /* --- Calculator Grid --- */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: #333;
+        }
+        .btn {
+            padding: 20px;
+            font-size: 1.2rem;
+            border: none;
+            background-color: var(--btn-bg);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .btn:hover { background-color: var(--btn-hover); }
+        .btn.operator { color: var(--operator-color); font-weight: bold; }
+        .btn.equal { background-color: var(--accent); color: white; grid-column: span 2; }
+        .btn.equal:hover { background-color: var(--accent-hover); }
+        .btn.clear { color: #ff5555; }
+        .btn.sci { background-color: #2c2c2c; font-size: 1rem; color: #81b0ff; }
+
+        /* --- Solvers Panel (Hidden by default) --- */
+        .solver-panel {
+            display: none;
+            padding: 20px;
+            background: var(--bg-color);
+            height: 400px;
+            overflow-y: auto;
+        }
+        .solver-panel.active { display: block; }
+        
+        .solver-group { margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .solver-group h3 { margin-top: 0; color: var(--accent); font-size: 1rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        input {
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+        button.solve-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .result-box {
+            margin-top: 10px;
+            background: #252525;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #4cd964;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('calc')">Calculator</button>
+        <button class="tab-btn" onclick="switchTab('solvers')">Advanced Solvers</button>
+    </div>
+
+    <div id="calc-view">
+        <div class="screen">
+            <div class="history" id="history"></div>
+            <div class="current-input" id="display">0</div>
+        </div>
+        <div class="keypad">
+            <button class="btn sci" onclick="appendFunc('sin(')">sin</button>
+            <button class="btn sci" onclick="appendFunc('cos(')">cos</button>
+            <button class="btn sci" onclick="appendFunc('tan(')">tan</button>
+            <button class="btn sci" onclick="toggleRadDeg()" id="rad-btn">RAD</button>
+
+            <button class="btn sci" onclick="appendFunc('log(')">log</button>
+            <button class="btn sci" onclick="appendFunc('ln(')">ln</button>
+            <button class="btn sci" onclick="appendFunc('sqrt(')">√</button>
+            <button class="btn sci" onclick="appendFunc('^')">x^y</button>
+
+            <button class="btn sci" onclick="appendFunc('fact(')">n!</button>
+            <button class="btn sci" onclick="appendFunc('nCr(')">nCr</button>
+            <button class="btn sci" onclick="appendFunc('nPr(')">nPr</button>
+            <button class="btn sci" onclick="appendVal('(')">(</button>
+            
+            <button class="btn clear" onclick="clearDisplay()">AC</button>
+            <button class="btn sci" onclick="appendVal(')')">)</button>
+            <button class="btn sci" onclick="appendVal('%')">%</button>
+            <button class="btn operator" onclick="appendVal('/')">÷</button>
+
+            <button class="btn" onclick="appendVal('7')">7</button>
+            <button class="btn" onclick="appendVal('8')">8</button>
+            <button class="btn" onclick="appendVal('9')">9</button>
+            <button class="btn operator" onclick="appendVal('*')">×</button>
+
+            <button class="btn" onclick="appendVal('4')">4</button>
+            <button class="btn" onclick="appendVal('5')">5</button>
+            <button class="btn" onclick="appendVal('6')">6</button>
+            <button class="btn operator" onclick="appendVal('-')">−</button>
+
+            <button class="btn" onclick="appendVal('1')">1</button>
+            <button class="btn" onclick="appendVal('2')">2</button>
+            <button class="btn" onclick="appendVal('3')">3</button>
+            <button class="btn operator" onclick="appendVal('+')">+</button>
+
+            <button class="btn" onclick="appendVal('0')">0</button>
+            <button class="btn" onclick="appendVal('.')">.</button>
+            <button class="btn equal" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <div id="solvers-view" class="solver-panel">
+        
+        <div class="solver-group">
+            <h3>Quadratic Equation (ax² + bx + c = 0)</h3>
+            <div class="input-group">
+                <input type="number" id="quad-a" placeholder="a">
+                <input type="number" id="quad-b" placeholder="b">
+                <input type="number" id="quad-c" placeholder="c">
+            </div>
+            <button class="solve-btn" onclick="solveQuadratic()">Solve Roots</button>
+            <div class="result-box" id="quad-result">Result...</div>
+        </div>
+
+        <div class="solver-group">
+            <h3>Statistics (Mean, Median, Std Dev)</h3>
+            <input type="text" id="stats-input" placeholder="Enter numbers separated by comma (e.g. 1, 2, 5, 8)">
+            <br><br>
+            <button class="solve-btn" onclick="solveStats()">Calculate Stats</button>
+            <div class="result-box" id="stats-result">Result...</div>
+        </div>
+
+        <div class="solver-group">
+            <h3>Vector Magnitude & Dot Product (2D)</h3>
+            <div class="input-group">
+                <input type="number" id="v1-x" placeholder="v1 x">
+                <input type="number" id="v1-y" placeholder="v1 y">
+            </div>
+            <div class="input-group">
+                <input type="number" id="v2-x" placeholder="v2 x">
+                <input type="number" id="v2-y" placeholder="v2 y">
+            </div>
+            <button class="solve-btn" onclick="solveVector()">Calculate</button>
+            <div class="result-box" id="vector-result">Result...</div>
+        </div>
+
+        <div class="solver-group">
+            <h3>Decimal to Binary</h3>
+            <input type="number" id="binary-input" placeholder="Enter decimal number">
+            <br><br>
+            <button class="solve-btn" onclick="solveBinary()">Convert</button>
+            <div class="result-box" id="binary-result">Result...</div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    /* --- CORE STATE --- */
+    let expression = "";
+    let isRadians = true;
+
+    const display = document.getElementById('display');
+    const history = document.getElementById('history');
+
+    /* --- TAB SWITCHING --- */
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if(tab === 'calc') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('calc-view').style.display = 'block';
+            document.getElementById('solvers-view').classList.remove('active');
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('calc-view').style.display = 'none';
+            document.getElementById('solvers-view').classList.add('active');
+        }
+    }
+
+    /* --- CALCULATOR LOGIC --- */
+    function toggleRadDeg() {
+        isRadians = !isRadians;
+        document.getElementById('rad-btn').innerText = isRadians ? "RAD" : "DEG";
+    }
+
+    function appendVal(val) {
+        if (display.innerText === '0' || display.innerText === 'Error') {
+            expression = "";
+        }
+        expression += val;
+        updateDisplay();
+    }
+
+    function appendFunc(func) {
+        if (display.innerText === '0' || display.innerText === 'Error') {
+            expression = "";
+        }
+        expression += func;
+        updateDisplay();
+    }
+
+    function clearDisplay() {
+        expression = "";
+        display.innerText = "0";
+        history.innerText = "";
+    }
+
+    function updateDisplay() {
+        // Visual replacement for cleaner look
+        let visual = expression
+            .replaceAll('*', '×')
+            .replaceAll('/', '÷')
+            .replaceAll('sqrt', '√');
+        display.innerText = visual || "0";
+    }
+
+    // --- MATH IMPLEMENTATION ---
+    // We create a safe environment to evaluate mathematical strings
+    
+    // Factorial
+    function fact(n) {
+        if (n < 0) return NaN;
+        if (n === 0 || n === 1) return 1;
+        let result = 1;
+        for (let i = 2; i <= n; i++) result *= i;
+        return result;
+    }
+
+    // Combinations & Permutations
+    function nCr(n, r) { return fact(n) / (fact(r) * fact(n - r)); }
+    function nPr(n, r) { return fact(n) / fact(n - r); }
+
+    // Trig wrappers to handle Degrees vs Radians
+    function sin(x) { return Math.sin(isRadians ? x : x * (Math.PI / 180)); }
+    function cos(x) { return Math.cos(isRadians ? x : x * (Math.PI / 180)); }
+    function tan(x) { return Math.tan(isRadians ? x : x * (Math.PI / 180)); }
+    
+    // Logs
+    function log(x) { return Math.log10(x); }
+    function ln(x) { return Math.log(x); }
+    function sqrt(x) { return Math.sqrt(x); }
+
+    function calculate() {
+        try {
+            // Replace custom syntax with JS math
+            let evalString = expression
+                .replaceAll('^', '**')
+                .replaceAll('π', 'Math.PI')
+                .replaceAll('e', 'Math.E');
+
+            // Evaluate
+            // Note: In production, use a parser instead of eval/Function for security. 
+            // For this local tool, Function is acceptable.
+            const result = new Function("return " + evalString)();
+
+            // Format result
+            // Check for float precision issues (e.g. 0.1+0.2)
+            let final = Math.round(result * 1000000000) / 1000000000;
+            
+            history.innerText = expression + " =";
+            display.innerText = final;
+            expression = final.toString();
+        } catch (e) {
+            display.innerText = "Error";
+            expression = "";
+        }
+    }
+
+    /* --- SOLVERS LOGIC --- */
+
+    // 1. Quadratic Solver
+    function solveQuadratic() {
+        const a = parseFloat(document.getElementById('quad-a').value);
+        const b = parseFloat(document.getElementById('quad-b').value);
+        const c = parseFloat(document.getElementById('quad-c').value);
+        const out = document.getElementById('quad-result');
+
+        if (isNaN(a) || isNaN(b) || isNaN(c)) { out.innerText = "Invalid Input"; return; }
+
+        let discriminant = b*b - 4*a*c;
+        if (discriminant > 0) {
+            let r1 = (-b + Math.sqrt(discriminant)) / (2*a);
+            let r2 = (-b - Math.sqrt(discriminant)) / (2*a);
+            out.innerText = `Roots: ${r1.toFixed(4)}, ${r2.toFixed(4)}`;
+        } else if (discriminant === 0) {
+            let r = -b / (2*a);
+            out.innerText = `Root: ${r.toFixed(4)}`;
+        } else {
+            let real = (-b / (2*a)).toFixed(4);
+            let imag = (Math.sqrt(-discriminant) / (2*a)).toFixed(4);
+            out.innerText = `Roots: ${real} ± ${imag}i`;
+        }
+    }
+
+    // 2. Statistics Solver
+    function solveStats() {
+        const input = document.getElementById('stats-input').value;
+        const out = document.getElementById('stats-result');
+        
+        try {
+            let nums = input.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+            if(nums.length === 0) throw new Error();
+
+            // Mean
+            let sum = nums.reduce((a, b) => a + b, 0);
+            let mean = sum / nums.length;
+
+            // Sort for Median
+            nums.sort((a, b) => a - b);
+            let mid = Math.floor(nums.length / 2);
+            let median = nums.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+
+            // Std Dev
+            let variance = nums.reduce((a, n) => a + Math.pow(n - mean, 2), 0) / nums.length;
+            let stdDev = Math.sqrt(variance);
+
+            out.innerHTML = `Mean: ${mean.toFixed(4)}<br>Median: ${median}<br>Std Dev: ${stdDev.toFixed(4)}`;
+        } catch (e) {
+            out.innerText = "Invalid Data format";
+        }
+    }
+
+    // 3. Vector Solver
+    function solveVector() {
+        const v1x = parseFloat(document.getElementById('v1-x').value) || 0;
+        const v1y = parseFloat(document.getElementById('v1-y').value) || 0;
+        const v2x = parseFloat(document.getElementById('v2-x').value) || 0;
+        const v2y = parseFloat(document.getElementById('v2-y').value) || 0;
+        const out = document.getElementById('vector-result');
+
+        let mag1 = Math.sqrt(v1x*v1x + v1y*v1y);
+        let dot = (v1x * v2x) + (v1y * v2y);
+        
+        // Cross Product (2D determinant)
+        let cross = (v1x * v2y) - (v1y * v2x);
+
+        out.innerHTML = `|v1|: ${mag1.toFixed(4)}<br>Dot Product: ${dot}<br>Cross (2D): ${cross}`;
+    }
+
+    // 4. Binary Solver
+    function solveBinary() {
+        const num = parseInt(document.getElementById('binary-input').value);
+        const out = document.getElementById('binary-result');
+        if(isNaN(num)) { out.innerText = "Invalid"; return; }
+        out.innerText = `Binary: ${num.toString(2)}`;
+    }
+
+</script>
+
+</body>
+</html>
